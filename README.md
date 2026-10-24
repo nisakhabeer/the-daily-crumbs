@@ -15,6 +15,6 @@ Photos are hotlinked from the live WordPress uploads
 Photo credit/caption lines were stripped from article content per the owner's rule.
 
 ## After the Vercel domain is known
-Re-run the generator (`tools/build.py`, reading the WordPress API dumps) with NEW_SITE_URL set to the Vercel domain so that
-Pinterest Save buttons and sharing links point at the new site instead of the
-WordPress URLs they currently carry.
+NEW_SITE_URL is set to the Vercel domain, so Pinterest Save buttons and
+sharing links point at the new site (the-daily-crumbs.vercel.app) instead of
+the WordPress URLs. Article images are still hotlinked from WordPress uploads.

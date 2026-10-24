@@ -6,10 +6,10 @@ Images are HOTLINKED from thedailycrumbs.wordpress.com uploads (not re-hosted).
 Save-on-Pinterest and sharing URLs still point at the live WordPress URLs;
 after the Vercel domain is known, set NEW_SITE_URL below and re-run to swap them.
 """
-import json, re, html as htmllib, os, math
+import json, re, html as htmllib, os, math, urllib.parse
 from datetime import datetime
 
-NEW_SITE_URL = ""  # e.g. "https://the-daily-crumbs.vercel.app" once deployed
+NEW_SITE_URL = "https://the-daily-crumbs.vercel.app"
 WP_BASE = "https://thedailycrumbs.wordpress.com"
 OUT = "/home/hatch/workspace/daily-crumbs-site"
 PER_PAGE = 10
@@ -72,6 +72,21 @@ def article_url(post):
     if NEW_SITE_URL:
         return NEW_SITE_URL.rstrip("/") + "/posts/%s/" % post["slug"]
     return post["URL"]
+
+def rewrite_pin_urls(text, post):
+    """Swap the WP article URL inside Pinterest pin-create url= params for the
+    new-site article URL. Media params (WP uploads pin images) are untouched,
+    as are all image srcs — only the article URL in the url= param changes."""
+    if not NEW_SITE_URL:
+        return text
+    wp_enc = urllib.parse.quote(post["URL"], safe="")
+    new_enc = urllib.parse.quote(article_url(post), safe="")
+    def fix_pin(m):
+        href = m.group(0)
+        href = href.replace("url=" + wp_enc, "url=" + new_enc)
+        href = href.replace(post["URL"], article_url(post))
+        return href
+    return re.sub(r'https://www\.pinterest\.com/pin/create[^"\s]*', fix_pin, text)
 
 def share_row(post):
     u = htmllib.escape(article_url(post), quote=True)
@@ -262,6 +277,7 @@ hero_img = "https://images.pexels.com/photos/39551170/pexels-photo-39551170.jpeg
 featured = posts[0]
 feat_save = re.search(r'href="(https://www\.pinterest\.com/pin/create/button/[^"]+)"', featured["content"])
 feat_save_url = htmllib.unescape(feat_save.group(1)) if feat_save else "https://www.pinterest.com/"
+feat_save_url = rewrite_pin_urls(feat_save_url, featured)
 
 def cat_rep(slug):
     for p in posts:
@@ -339,7 +355,7 @@ for slug, data in cat_posts.items():
 # ---------- article pages ----------
 issues = []
 for p in posts:
-    content = clean_content(p["content"])
+    content = rewrite_pin_urls(clean_content(p["content"]), p)
     if "Photo by" in content:
         issues.append((p["slug"], "residual 'Photo by' text remains"))
     cats = sorted(p.get("categories", {}).values(), key=lambda c: c["name"])
@@ -389,9 +405,9 @@ Photos are hotlinked from the live WordPress uploads
 Photo credit/caption lines were stripped from article content per the owner's rule.
 
 ## After the Vercel domain is known
-Re-run the generator with NEW_SITE_URL set to the Vercel domain so that
-Pinterest Save buttons and sharing links point at the new site instead of the
-WordPress URLs they currently carry.
+NEW_SITE_URL is set to the Vercel domain, so Pinterest Save buttons and
+sharing links point at the new site (the-daily-crumbs.vercel.app) instead of
+the WordPress URLs. Article images are still hotlinked from WordPress uploads.
 """)
 
 print("posts:", len(posts))
